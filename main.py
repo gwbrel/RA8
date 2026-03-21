@@ -6,5 +6,13 @@ def lerArquivo(file_path: str) -> list:
             linhas.append(line)
         return linhas
     
-    def parseExpresao():
-        pass
+    def parseExpresao(linhas):
+        tokens = []
+        a = 0
+        tamanho = len(linhas)
+        while a < tamanho:
+            char = linha[a]
+            #ignorar espaco
+            if char.isspace():
+                a += 1
+                continue
