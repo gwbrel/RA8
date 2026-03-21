@@ -12,7 +12,9 @@ def tratarnumero(linha, a):
     while a < len(linha) and (linha[a].isdigit() or linha[a] == '.'):
         buffer += linha[a]
         a += 1
-
+        if buffer.count('.') > 1:
+            raise ValueError({buffer})
+        tipo = "numReal" if "." in buffer else "numINT"
 
     def parseExpresao(linhas):
         tokens = []
@@ -31,3 +33,7 @@ def tratarnumero(linha, a):
             elif char == ')':
                 tokens.append((")"))
                 a += 1
+            #Numeros
+            elif char.isdigit():
+                a, token = tratarnumero(linha, a)
+                tokens.append(token)
