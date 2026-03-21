@@ -6,6 +6,14 @@ def lerArquivo(file_path: str) -> list:
             linhas.append(line)
         return linhas
     
+
+def tratarnumero(linha, a):
+    buffer = ""
+    while a < len(linha) and (linha[a].isdigit() or linha[a] == '.'):
+        buffer += linha[a]
+        a += 1
+
+
     def parseExpresao(linhas):
         tokens = []
         a = 0
