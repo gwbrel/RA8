@@ -1,3 +1,5 @@
+import sys
+
 def lerArquivo(file_path: str) -> list:
     linha = []
     with open(file_path, 'r') as f:
@@ -67,3 +69,16 @@ def parseExpresao(linha):
             else:
                 raise ValueError(f"Erro Lexico '{char}' nao reconhecido")
         return tokens
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Uso: python main.py teste.txt")
+    else:
+        try:
+            with open(sys.argv[1], 'r') as f:
+                for linha in f:
+                    conteudo = linha.strip()
+                    if conteudo:
+                        print(f"Tokens: {parseExpresao(conteudo)}")
+        except Exception as e:
+            print(f"Erro: {e}")
