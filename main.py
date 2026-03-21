@@ -16,3 +16,10 @@ def lerArquivo(file_path: str) -> list:
             if char.isspace():
                 a += 1
                 continue
+            #pararenteses
+            if char == '(':
+                tokens.append(("("))
+                a += 1
+            elif char == ')':
+                tokens.append((")"))
+                a += 1
