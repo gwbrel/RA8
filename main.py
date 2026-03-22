@@ -70,6 +70,43 @@ def parseExpresao(linha):
                 raise ValueError(f"Erro Lexico '{char}' nao reconhecido")
         return tokens
 
+
+ #==================== PARTE2
+
+class AmbienteExecucao:
+    def __init__(self):
+        self.memoria = {}
+        self.historico = []
+ 
+    def calcular(self, a, b, op):
+        if op == '+':  return a + b
+        if op == '-':  return a - b
+        if op == '*':  return a * b
+        if op == '/':  return a / b
+        if op == '//': return float(int(a) // int(b))
+        if op == '%':  return float(int(a) % int(b))
+        if op == '^':  return a ** int(b)
+        raise ValueError(f"operador sem suporte: {op}")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Uso: python main.py teste.txt")
