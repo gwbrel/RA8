@@ -113,6 +113,15 @@ class AmbienteExecucao:
                         pilha.append(self.memoria[item])
                     else:
                         pilha.append(item)
+                                        
+                elif len(grupo) == 2 and grupo[1] == 'RES': # N RES Para consulta de historico
+                    n = int(grupo[0])
+                    if n <= 0 or n > len(self.historico):
+                        raise ValueError(
+                            f"RES({n}): historico tem apenas "
+                            f"{len(self.historico)} entrada(s)."
+                        )
+                    pilha.append(self.historico[-n])
 
 
 
