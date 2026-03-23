@@ -87,8 +87,32 @@ class AmbienteExecucao:
         if op == '%':  return float(int(a) % int(b))
         if op == '^':  return a ** int(b)
         raise ValueError(f"operador sem suporte: {op}")
+    
+    def executarExpressao(self, tokens):
+        pilha = []
+ 
+        for token in tokens:
+            tipo, valor = token
 
+            if valor == '(':
+                pilha.append('(') #abre o parenteses pra empilhar o marcador
 
+            elif valor == ')':
+                grupo = []
+                while pilha and pilha[-1] != '(':
+                    grupo.append(pilha.pop())
+                if pilha:
+                    pilha.pop()
+                grupo.reverse()
+                #recall da memoria
+                if len(grupo) == 1:
+                    item = grupo[0]
+                    if isinstance(item, str):
+                        if item not in self.memoria:
+                            raise ValueError(f"Variavel '{item}' nao foi definida na memoria")
+                        pilha.append(self.memoria[item])
+                    else:
+                        pilha.append(item)
 
 
 
