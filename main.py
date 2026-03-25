@@ -1,15 +1,19 @@
 import sys
 
-# FASE 1: ANALISADOR LÉXICO
+
+#FASE1: ANALISADOR LÉXICO (AFD)
+
 
 def lerArquivo(file_path: str) -> list:
-    linha = []
-    with open(file_path, 'r') as f:
-        for line in f:
-            line = line.strip()
-            linha.append(line)
-        return linha
-
+    linhas = []
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                linhas.append(line.strip())
+    except FileNotFoundError:
+        print(f"Erro: Arquivo '{file_path}' não encontrado.")
+        sys.exit(1)
+    return linhas
 
 def tratarnumero(linha, a):
     buffer = ""
@@ -21,12 +25,10 @@ def tratarnumero(linha, a):
     tipo = "numReal" if "." in buffer else "numINT"
     return a, (tipo, buffer)
 
-
 def tratarbarra(linha, a):
     if a + 1 < len(linha) and linha[a+1] == '/':
         return a + 2, ("OP", "//")
     return a + 1, ("OP", "/")
-
 
 def tratar_identificador(linha, a):
     buffer = ""
@@ -36,12 +38,10 @@ def tratar_identificador(linha, a):
     tipo = "RES" if buffer == "RES" else "MEM"
     return a, (tipo, buffer)
 
-
 def parseExpresao(linha):
     tokens = []
     a = 0
-    tamanho = len(linha)
-    while a < tamanho:
+    while a < len(linha):
         char = linha[a]
         if char.isspace():
             a += 1
@@ -69,127 +69,139 @@ def parseExpresao(linha):
     return tokens
 
 
-
-# FASE 2: AMBIENTE DE EXECUÇÃO
+# FASE2: - AMBIENTE DE EXECUÇÃO (IEEE 754 & Memória)
 
 class AmbienteExecucao:
     def __init__(self):
         self.memoria = {}
         self.historico = []
+        self.mem_counter = 0
 
     def calcular(self, a, b, op):
-        if op == '+':  return a + b
-        if op == '-':  return a - b
-        if op == '*':  return a * b
-        if op == '/':  return a / b
+        if op == '+':  return float(a + b)
+        if op == '-':  return float(a - b)
+        if op == '*':  return float(a * b)
+        if op == '/':  return float(a / b)
         if op == '//': return float(int(a) // int(b))
         if op == '%':  return float(int(a) % int(b))
-        if op == '^':  return a ** int(b)
-        raise ValueError(f"operador sem suporte: {op}")
+        if op == '^':  return float(a ** int(b))
+        raise ValueError(f"Operador sem suporte: {op}")
 
     def executarExpressao(self, tokens):
         pilha = []
-
         for token in tokens:
-            tipo, valor = token   # seguro: todos os tokens agora sao tuplas
+            tipo, valor = token
 
-            #abre parentese
             if tipo == 'ABRE_PAR':
                 pilha.append('(')
-
-            #Fecha parentese
             elif tipo == 'FECHA_PAR':
                 grupo = []
                 while pilha and pilha[-1] != '(':
                     grupo.append(pilha.pop())
-                if pilha:
-                    pilha.pop()  # remove o marcador '('
+                if pilha: pilha.pop() # Remove '('
                 grupo.reverse()
 
-                #recall de memoria
-                if len(grupo) == 1:
-                    item = grupo[0]
-                    if isinstance(item, str):
-                        if item not in self.memoria:
-                            raise ValueError(f"Variavel '{item}' nao foi definida na memoria")
-                        pilha.append(self.memoria[item])
-                    else:
-                        pilha.append(item)
-
-                #consulta ao historico
-                elif len(grupo) == 2 and grupo[1] == 'RES':
+                # Logica MEM: Se encontrar o comando MEM no grupo
+                if 'MEM' in grupo:
+                    val = grupo[0] if not isinstance(grupo[0], str) else grupo[1]
+                    nome = f"var{self.mem_counter}"
+                    self.memoria[nome] = float(val)
+                    self.mem_counter += 1
+                    pilha.append(float(val))
+                
+                # Logica RES: Se encontrar o comando RES
+                elif 'RES' in grupo:
                     n = int(grupo[0])
                     if n <= 0 or n > len(self.historico):
-                        raise ValueError(
-                            f"RES({n}): historico tem apenas "
-                            f"{len(self.historico)} entrada(s)."
-                        )
+                        raise ValueError(f"RES({n}) inválido. Histórico possui {len(self.historico)} itens.")
                     pilha.append(self.historico[-n])
-
-                #store de memoria
-                elif len(grupo) == 3 and grupo[2] == 'MEM':
-                    nome, val, _ = grupo
-                    if not isinstance(nome, str):
-                        raise ValueError(f"MEM: esperado nome de variavel, recebi '{nome}'.")
-                    self.memoria[nome] = float(val)
-                    pilha.append(float(val))
-
-                #grupo generico → re-empilha para operadores externos
+                
                 else:
-                    for item in grupo:
-                        pilha.append(item)
+                    for item in grupo: pilha.append(item)
 
-            #literais numericos
             elif tipo in ('numINT', 'numReal'):
                 pilha.append(float(valor))
-
-            #identificadores
             elif tipo in ('MEM', 'RES'):
                 pilha.append(valor)
-
-            #operadores aritmeticos
             elif tipo == 'OP':
-                if len(pilha) < 2:
-                    raise ValueError(f"Operador '{valor}': pilha insuficiente.")
+                if len(pilha) < 2: raise ValueError(f"Pilha insuficiente para {valor}")
                 b = pilha.pop()
                 a = pilha.pop()
                 pilha.append(self.calcular(a, b, valor))
 
-        resultado_final = pilha[0] if pilha else 0.0
-        tem_operador = any(t[0] == 'OP' for t in tokens)
-        if tem_operador:
-            self.historico.append(resultado_final)
-        return resultado_final
+        resultado = pilha[0] if pilha else 0.0
+        # So vai ser adicionado ao se a linha nao for apenas uma consulta de RES ou MEM solitaria
+        if any(t[0] == 'OP' for t in tokens) or ('MEM' in [t[1] for t in tokens]):
+            self.historico.append(resultado)
+        return resultado
 
+# -FASE 3 - GERACAO DE ASSEMBLY ARMv7
 
+def gerarAssembly(tokens, id_linha):
+    asm_data = [f".data", f"  @ Dados da Linha {id_linha}"]
+    asm_text = [f".text", f"  @ Codigo da Linha {id_linha}"]
+    num_idx = 0
 
-# EXECUTAR
+    for tipo, valor in tokens:
+        if tipo in ('ABRE_PAR', 'FECHA_PAR'): continue
+        
+        if tipo in ('numINT', 'numReal'):
+            label = f"val_{id_linha}_{num_idx}"
+            asm_data.append(f"{label}: .double {valor}")
+            asm_text.append(f"    LDR r0, ={label}")
+            asm_text.append(f"    VLDR.F64 d0, [r0]")
+            asm_text.append(f"    VPUSH {{d0}}")
+            num_idx += 1
+            
+        elif tipo == 'OP':
+            asm_text.append("    VPOP {d1}           @ Desempilha b")
+            asm_text.append("    VPOP {d0}           @ Desempilha a")
+            if valor == '+': asm_text.append("    VADD.F64 d0, d0, d1")
+            elif valor == '-': asm_text.append("    VSUB.F64 d0, d0, d1")
+            elif valor == '*': asm_text.append("    VMUL.F64 d0, d0, d1")
+            elif valor == '/': asm_text.append("    VDIV.F64 d0, d0, d1")
+            else: asm_text.append(f"    BL rotina_{valor}")
+            asm_text.append("    VPUSH {d0}")
+
+        elif tipo == 'MEM':
+            label_mem = f"mem_pos_{id_linha}"
+            asm_data.append(f"{label_mem}: .double 0.0")
+            asm_text.append(f"    LDR r0, ={label_mem}")
+            asm_text.append("    VPOP {d0}")
+            asm_text.append("    VSTR.F64 d0, [r0]    @ Salva na RAM")
+            asm_text.append("    VPUSH {d0}")
+
+        elif tipo == 'RES':
+            asm_text.append("    VPOP {d0}           @ Pega o indice N")
+            asm_text.append("    @ No simulador, acessaria o array de historico")
+            asm_text.append("    BL recuperar_historico")
+
+    return "\n".join(asm_data) + "\n\n" + "\n".join(asm_text)
+
+# EXECUÇÃO PRINCIPAL
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Uso: python main_corrigido.py arquivo_de_teste.txt")
-    else:
-        ambiente = AmbienteExecucao()
+        print("Uso: python main.py arquivo.txt")
+        sys.exit(1)
 
+    ambiente = AmbienteExecucao()
+    linhas = lerArquivo(sys.argv[1])
+
+    for i, linha in enumerate(linhas, 1):
+        if not linha: continue
         try:
-            with open(sys.argv[1], 'r') as arquivo:
-                for num_linha, linha in enumerate(arquivo, 1):
-                    linha_limpa = linha.strip()
-                    if not linha_limpa:
-                        continue
+            tokens = parseExpresao(linha)
+            res = ambiente.executarExpressao(tokens)
+            asm = gerarAssembly(tokens, i)
+            
+            print(f"Linha {i}: {linha}")
+            print(f"  -> Tokens:    {tokens}")
+            print(f"  -> Resultado: {res}")
+            print(f"  -> Assembly:\n{asm}\n")
+        except Exception as e:
+            print(f"Erro na linha {i} '{linha}': {e}\n")
 
-                    try:
-                        tokens = parseExpresao(linha_limpa)
-                        resultado = ambiente.executarExpressao(tokens)
-
-                        print(f"Linha {num_linha}: {linha_limpa}")
-                        print(f"  -> Resultado: {resultado}\n")
-
-                    except Exception as e:
-                        print(f"Erro na linha {num_linha} '{linha_limpa}': {e}\n")
-
-            print("=== ESTADO FINAL DA MÁQUINA ===")
-            print(f"Memória:           {ambiente.memoria}")
-            print(f"Histórico (RES):   {ambiente.historico}")
-
-        except FileNotFoundError:
-            print("Erro: Arquivo não encontrado.")
+    print("=== ESTADO FINAL DA MÁQUINA ===")
+    print(f"Memória:         {ambiente.memoria}")
+    print(f"Histórico (RES): {ambiente.historico}")
