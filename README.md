@@ -103,3 +103,12 @@ A terceira fase consiste na tradução dos tokens para instruções Assembly com
 
 - data: armazenamento de constantes
 - text: instruções executáveis
+
+## Como Executar
+
+### Passo 1 — Gerar os tokens e o Assembly
+
+```bash
+python main.py teste.txt
+```
+
