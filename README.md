@@ -104,6 +104,17 @@ A terceira fase consiste na tradução dos tokens para instruções Assembly com
 - data: armazenamento de constantes
 - text: instruções executáveis
 
+## Estrutura de Arquivos
+
+```
+projeto/
+├── main.py          # Código principal
+├── teste.txt        # Arquivo de entrada (Criado por você)
+├── tokens.txt       # Gerado automaticamente após execução
+└── saida.s          # Gerado automaticamente após execução
+
+```
+
 ## Como Executar
 
 ### Passo 1 — Gerar os tokens e o Assembly
@@ -111,4 +122,9 @@ A terceira fase consiste na tradução dos tokens para instruções Assembly com
 ```bash
 python main.py teste.txt
 ```
-
+### Como Executar no CPUlator
+  1. Escolha o sistema ARMv7 DE1-SoC
+  2. Selecione o arquivo saida.s no editor
+  3. Selecione Compile and Load, depois Continue
+  4. Após a execução parar, vá em Memory (Ctrl-M)
+  5. Digite re_0 no campo "Go to address" para ver os resultados
