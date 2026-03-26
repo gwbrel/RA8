@@ -188,20 +188,38 @@ if __name__ == "__main__":
     ambiente = AmbienteExecucao()
     linhas = lerArquivo(sys.argv[1])
 
-    for i, linha in enumerate(linhas, 1):
-        if not linha: continue
-        try:
-            tokens = parseExpresao(linha)
-            res = ambiente.executarExpressao(tokens)
-            asm = gerarAssembly(tokens, i)
-            
-            print(f"Linha {i}: {linha}")
-            print(f"  -> Tokens:    {tokens}")
-            print(f"  -> Resultado: {res}")
-            print(f"  -> Assembly:\n{asm}\n")
-        except Exception as e:
-            print(f"Erro na linha {i} '{linha}': {e}\n")
+    with open("tokens.txt", "w", encoding="utf-8") as f_tok, \
+         open("saida.s", "w", encoding="utf-8") as f_asm:
+
+        for i, linha in enumerate(linhas, 1):
+            if not linha: continue
+            try:
+                tokens = parseExpresao(linha)
+                res = ambiente.executarExpressao(tokens)
+                asm = gerarAssembly(tokens, i)
+
+                # Salva tokens no .txt
+                f_tok.write(f"Linha {i}: {linha}\n")
+                f_tok.write(f"  -> Tokens:    {tokens}\n")
+                f_tok.write(f"  -> Resultado: {res}\n\n")
+
+                # Salva assembly no .s
+                f_asm.write(f"@ ---- Linha {i}: {linha} ----\n")
+                f_asm.write(asm + "\n\n")
+
+                # Continua exibindo no terminal também
+                print(f"Linha {i}: {linha}")
+                print(f"  -> Tokens:    {tokens}")
+                print(f"  -> Resultado: {res}")
+                print(f"  -> Assembly:\n{asm}\n")
+
+            except Exception as e:
+                msg = f"Erro na linha {i} '{linha}': {e}\n"
+                print(msg)
+                f_tok.write(msg)
+                f_asm.write(f"@ {msg}")
 
     print("=== ESTADO FINAL DA MÁQUINA ===")
     print(f"Memória:         {ambiente.memoria}")
     print(f"Histórico (RES): {ambiente.historico}")
+    print("\nArquivos gerados: tokens.txt | saida.s")
