@@ -141,10 +141,12 @@ def gerarAssembly(tokens, id_linha):
     asm_data = [f".data", f"  @ Dados da Linha {id_linha}"]
     asm_text = [f".text", f"  @ Codigo da Linha {id_linha}"]
     num_idx = 0
+    op_idx  = 0  # contador para gerar labels únicos nos loops
 
     for tipo, valor in tokens:
-        if tipo in ('ABRE_PAR', 'FECHA_PAR'): continue
-        
+        if tipo in ('ABRE_PAR', 'FECHA_PAR'):
+            continue
+
         if tipo in ('numINT', 'numReal'):
             label = f"val_{id_linha}_{num_idx}"
             asm_data.append(f"{label}: .double {valor}")
@@ -152,16 +154,58 @@ def gerarAssembly(tokens, id_linha):
             asm_text.append(f"    VLDR.F64 d0, [r0]")
             asm_text.append(f"    VPUSH {{d0}}")
             num_idx += 1
-            
+
         elif tipo == 'OP':
             asm_text.append("    VPOP {d1}           @ Desempilha b")
             asm_text.append("    VPOP {d0}           @ Desempilha a")
-            if valor == '+': asm_text.append("    VADD.F64 d0, d0, d1")
-            elif valor == '-': asm_text.append("    VSUB.F64 d0, d0, d1")
-            elif valor == '*': asm_text.append("    VMUL.F64 d0, d0, d1")
-            elif valor == '/': asm_text.append("    VDIV.F64 d0, d0, d1")
-            else: asm_text.append(f"    BL rotina_{valor}")
+
+            if valor == '+':
+                asm_text.append("    VADD.F64 d0, d0, d1")
+
+            elif valor == '-':
+                asm_text.append("    VSUB.F64 d0, d0, d1")
+
+            elif valor == '*':
+                asm_text.append("    VMUL.F64 d0, d0, d1")
+
+            elif valor == '/':
+                asm_text.append("    VDIV.F64 d0, d0, d1")
+
+            elif valor == '//':
+    # Divide em float, trunca para inteiro, volta para double
+                asm_text.append("    VDIV.F64 d0, d0, d1        @ d0 = a / b")
+                asm_text.append("    VCVT.S32.F64 s0, d0         @ trunca para inteiro")
+                asm_text.append("    VCVT.F64.S32 d0, s0         @ volta para double")
+
+            elif valor == '%':
+                # a % b = a - trunc(a/b) * b  →  tudo em VFP, sem SDIV
+                asm_text.append("    VDIV.F64 d2, d0, d1         @ d2 = a / b")
+                asm_text.append("    VCVT.S32.F64 s4, d2         @ trunca quociente")
+                asm_text.append("    VCVT.F64.S32 d2, s4         @ quociente inteiro como double")
+                asm_text.append("    VMUL.F64 d2, d2, d1         @ d2 = trunc(a/b) * b")
+                asm_text.append("    VSUB.F64 d0, d0, d2         @ d0 = a - trunc(a/b)*b")
+
+            elif valor == '^':
+                # Potencia inteira por loop: result=1, repete *base por exp vezes
+                lp  = f"pot_loop_{id_linha}_{op_idx}"
+                fim = f"pot_fim_{id_linha}_{op_idx}"
+                asm_text.append("    VCVT.S32.F64 s0, d0    @ base → int")
+                asm_text.append("    VCVT.S32.F64 s1, d1    @ exp  → int")
+                asm_text.append("    VMOV r0, s0             @ r0 = base")
+                asm_text.append("    VMOV r1, s1             @ r1 = expoente")
+                asm_text.append("    MOV  r2, #1             @ r2 = resultado = 1")
+                asm_text.append(f"{lp}:")
+                asm_text.append("    CMP  r1, #0")
+                asm_text.append(f"    BEQ  {fim}")
+                asm_text.append("    MUL  r2, r2, r0         @ resultado *= base")
+                asm_text.append("    SUB  r1, r1, #1         @ expoente--")
+                asm_text.append(f"    B    {lp}")
+                asm_text.append(f"{fim}:")
+                asm_text.append("    VMOV s0, r2")
+                asm_text.append("    VCVT.F64.S32 d0, s0    @ int → double")
+
             asm_text.append("    VPUSH {d0}")
+            op_idx += 1
 
         elif tipo == 'MEM':
             label_mem = f"mem_pos_{id_linha}"
@@ -178,6 +222,7 @@ def gerarAssembly(tokens, id_linha):
 
     return "\n".join(asm_data) + "\n\n" + "\n".join(asm_text)
 
+
 # EXECUÇÃO PRINCIPAL
 
 if __name__ == "__main__":
@@ -190,6 +235,11 @@ if __name__ == "__main__":
 
     with open("tokens.txt", "w", encoding="utf-8") as f_tok, \
          open("saida.s", "w", encoding="utf-8") as f_asm:
+
+        # 1. CABECALHO OBRIGATORIO PARA INICIO DO GERAR ASSEMBLY
+        f_asm.write(".global _start\n")
+        f_asm.write(".text\n")
+        f_asm.write("_start:\n\n")
 
         for i, linha in enumerate(linhas, 1):
             if not linha: continue
@@ -207,17 +257,28 @@ if __name__ == "__main__":
                 f_asm.write(f"@ ---- Linha {i}: {linha} ----\n")
                 f_asm.write(asm + "\n\n")
 
-                # Continua exibindo no terminal também
                 print(f"Linha {i}: {linha}")
                 print(f"  -> Tokens:    {tokens}")
                 print(f"  -> Resultado: {res}")
-                print(f"  -> Assembly:\n{asm}\n")
 
             except Exception as e:
                 msg = f"Erro na linha {i} '{linha}': {e}\n"
                 print(msg)
                 f_tok.write(msg)
-                f_asm.write(f"@ {msg}")
+                f_asm.write(f"@ {msg}\n")
+
+        # 2. ENCERRA O PROGRAMA CORRETAMENTE E ADICIONA AS SUBROTINAS AUXILIARES RES PARA RECUPERAR O HISTORICO DA MEMORIA
+        f_asm.write("@ ---- Fim da Execução ----\n")
+        f_asm.write("    MOV r7, #1          @ Syscall de Exit no Linux ARM\n")
+        f_asm.write("    MOV r0, #0          @ Retorna status 0 (Sucesso)\n")
+        f_asm.write("    SVC 0               @ Executa chamada de sistema\n\n")
+
+        f_asm.write("@ ---- Subrotinas Auxiliares ----\n")
+        f_asm.write("recuperar_historico:\n")
+        f_asm.write("    @ STUB: Função vazia para evitar erro de compilação.\n")
+        f_asm.write("    @ Em uma implementação completa, a lógica para ler a memória RAM\n")
+        f_asm.write("    @ com base no índice passado no registrador d0 iria aqui.\n")
+        f_asm.write("    BX lr               @ Retorna para onde a função foi chamada\n")
 
     print("=== ESTADO FINAL DA MÁQUINA ===")
     print(f"Memória:         {ambiente.memoria}")
