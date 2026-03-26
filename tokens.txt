@@ -1,0 +1,37 @@
+Linha 1: 3.14 2.0 +
+  -> Tokens:    [('numReal', '3.14'), ('numReal', '2.0'), ('OP', '+')]
+  -> Resultado: 5.140000000000001
+
+Linha 2: 5 3 *
+  -> Tokens:    [('numINT', '5'), ('numINT', '3'), ('OP', '*')]
+  -> Resultado: 15.0
+
+Linha 3: 10 2 /
+  -> Tokens:    [('numINT', '10'), ('numINT', '2'), ('OP', '/')]
+  -> Resultado: 5.0
+
+Linha 4: 8 3 %
+  -> Tokens:    [('numINT', '8'), ('numINT', '3'), ('OP', '%')]
+  -> Resultado: 2.0
+
+Linha 5: 2 3 ^
+  -> Tokens:    [('numINT', '2'), ('numINT', '3'), ('OP', '^')]
+  -> Resultado: 8.0
+
+Linha 6: (3 4 +)
+  -> Tokens:    [('ABRE_PAR', '('), ('numINT', '3'), ('numINT', '4'), ('OP', '+'), ('FECHA_PAR', ')')]
+  -> Resultado: 7.0
+
+Linha 7: ((1.5 2.0 *) (3.0 4.0 *) /)
+  -> Tokens:    [('ABRE_PAR', '('), ('ABRE_PAR', '('), ('numReal', '1.5'), ('numReal', '2.0'), ('OP', '*'), ('FECHA_PAR', ')'), ('ABRE_PAR', '('), ('numReal', '3.0'), ('numReal', '4.0'), ('OP', '*'), ('FECHA_PAR', ')'), ('OP', '/'), ('FECHA_PAR', ')')]
+  -> Resultado: 0.25
+
+Linha 8: (5 MEM)
+  -> Tokens:    [('ABRE_PAR', '('), ('numINT', '5'), ('MEM', 'MEM'), ('FECHA_PAR', ')')]
+  -> Resultado: 5.0
+
+Linha 9: (1 RES)
+  -> Tokens:    [('ABRE_PAR', '('), ('numINT', '1'), ('RES', 'RES'), ('FECHA_PAR', ')')]
+  -> Resultado: 5.0
+
+Erro na linha 10 '3.14.5 2 +': Número malformado: 3.14.5
