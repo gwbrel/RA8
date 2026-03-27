@@ -260,6 +260,7 @@ if __name__ == "__main__":
                 print(f"Linha {i}: {linha}")
                 print(f"  -> Tokens:    {tokens}")
                 print(f"  -> Resultado: {res}")
+                print(f"\n--- ASSEMBLY GERADO (Linha {i}) ---\n{asm}\n")
 
             except Exception as e:
                 msg = f"Erro na linha {i} '{linha}': {e}\n"
