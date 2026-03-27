@@ -16,6 +16,19 @@ Este projeto apresenta a implementação de um interpretador de expressões mate
 
 ---
 
+## Estrutura de Arquivos
+
+```
+projeto/
+├── main.py          # Código principal
+├── teste.txt        # Arquivo de entrada (Criado por você)
+├── tokens.txt       # Gerado automaticamente após execução
+└── saida.s          # Gerado automaticamente após execução
+
+```
+
+---
+
 ## Arquitetura do Sistema
 
 O sistema é estruturado em três fases principais:
@@ -104,16 +117,39 @@ A terceira fase consiste na tradução dos tokens para instruções Assembly com
 - data: armazenamento de constantes
 - text: instruções executáveis
 
-## Estrutura de Arquivos
+## Testes
+ 
+   **Se testarmos o teste.txt temos o seguinte retorno:**
 
 ```
-projeto/
-├── main.py          # Código principal
-├── teste.txt        # Arquivo de entrada (Criado por você)
-├── tokens.txt       # Gerado automaticamente após execução
-└── saida.s          # Gerado automaticamente após execução
+
+Linha 1: 3.14 2.0 +
+  -> Tokens:    [('numReal', '3.14'), ('numReal', '2.0'), ('OP', '+')]
+  -> Resultado: 5.140000000000001
+
+--- ASSEMBLY GERADO (Linha 1) ---
+.data
+  @ Dados da Linha 1
+val_1_0: .double 3.14
+val_1_1: .double 2.0
+
+.text
+  @ Codigo da Linha 1
+    LDR r0, =val_1_0
+    VLDR.F64 d0, [r0]
+    VPUSH {d0}
+    LDR r0, =val_1_1
+    VLDR.F64 d0, [r0]
+    VPUSH {d0}
+    VPOP {d1}           @ Desempilha b
+    VPOP {d0}           @ Desempilha a
+    VADD.F64 d0, d0, d1
+    VPUSH {d0}
+
 
 ```
+
+---
 
 ## Como Executar
 
